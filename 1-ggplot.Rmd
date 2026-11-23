@@ -1,0 +1,714 @@
+---
+title: "Using ggplot"
+output:
+  html_notebook:
+    code_folding: show
+    highlight: zenburn
+    number_sections: no
+    theme: cerulean
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    df_print: paged
+---
+
+```{r setup, include=FALSE} 
+########## NOTEBOOK CONFIGURATION, DO NOT EDIT ##########
+
+# Set some paramters for the notebook
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+# clear all variables that might be stored from a previous analysis:
+rm(list=ls(all=T))
+
+# Library paths for Linux
+.libPaths(c("/homedirs8/shms/workshops/260929-Intro-R/libs/x86_64-pc-linux-gnu-library/4.6/", "/opt/R/4.6.1/lib/R/library"))
+# Library paths for Windows
+#.libPaths(c(.libPaths(), "N:/R-workshop/win-library/4.5/"))
+
+.libPaths()
+########## NOTEBOOK CONFIGURATION, DO NOT EDIT ##########
+```
+
+<hr style="border:2px solid gray"> </hr>
+
+***Please follow the instructions in the README file before starting this tutorial.***
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+# Install missing packages
+
+- First check that we have all the packages that we need for the tutorial
+- if any are missing then they will be installed
+
+```{r eval=FALSE}
+if (!require(tidyverse)) install.packages("tidyverse")
+if (!require(readxl)) install.packages("readxl")
+if (!require(RSQLite)) install.packages("RSQLite")
+if (!require(DT)) install.packages("DT")
+if (!require(plotly)) install.packages("plotly")
+if (!require(ggsignif)) install.packages("ggsignif")
+if (!require(ggdendro)) install.packages("ggdendro")
+if (!require(patchwork)) install.packages("patchwork")
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+# Loading the packages
+
+- We will use the various packages of the [tidyverse](https://www.tidyverse.org/)
+- This includes the popular plotting library ggplot2
+- Lets load the packages
+
+```{r}
+library(tidyverse)
+```
+
+# Loading the data
+
+- We now need load some data to plot
+
+- We can load this from most of the popular formats
+
+- From a comma separated formated file (csv):
+
+```{r}
+read_csv('data/stats.csv', show_col_types = FALSE)
+```
+
+- From a tab separated formated file (tsv):
+
+```{r}
+read_tsv('data/stats.tsv', show_col_types = FALSE)
+```
+
+- From an excel file, in order to do this we need to first load the `readxl` package
+
+```{r}
+library(readxl)
+
+read_xlsx('data/stats.xlsx')
+```
+
+- We can also load data directly from a database, to access a local sqlite3 database, first load the `RSQLite` package (to load from MIcrosoft Access you could use the `RODBC` package)
+
+```{r}
+library(RSQLite)
+
+conn <- dbConnect(RSQLite::SQLite(), "data/stats.db")
+
+dbGetQuery(conn, "SELECT * FROM stats")
+```
+
+- Above we loaded the data and printed it to the screen. But we need to keep the data in a variable:
+
+```{r}
+stats <- read_xlsx('data/stats.xlsx')
+```
+
+- the data is now stored in the `stats` variable, we can verify this by just running the variable name
+
+```{r}
+stats
+```
+
+- We can generate nicer looking tables for our reports using the `DT` package and the `datatable` function
+
+```{r}
+library(DT)
+
+datatable(stats)
+```
+
+- if we need to we can use the pipe symbol `%>%` to run other filtering and renaming functions on our data, here we use the `filter()` function to filter the data by the `reads` column. Notice that the number of rows reduces from 58 to 21
+
+```{r}
+stats %>%
+  filter(reads > 1000000)
+```
+
+- here we filter by both the `reads` and the `coverage` columns, we now only have 8 rows
+
+```{r}
+stats %>%
+  filter(reads > 1000000 | coverage > 110)
+```
+
+- here we use the `mutate()` function to add a new column called `total` by calculating the sum of the `coverage` and the `reads` columns
+
+```{r}
+stats %>%
+  mutate(total = reads + coverage)
+```
+
+- here we use the `rename()` function to change the `reads` column name to `counts`
+
+```{r}
+stats %>%
+  rename(counts = reads)
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+# Plotting with ggplot
+
+## Plotting a bar charts
+
+- ggplot allows us to generate figures in layers, building them up piece by piece
+- initially we generate the coordinate system
+- `ggplot()` need the name of the variable containing the data and which variables to use in the plot
+
+```{r fig.width=10}
+ggplot(stats, aes(x=isolate, y=reads)) 
+```
+
+- there is no actually plot here as we have not yet told ggplot which kind of plot we want
+- we add the layers by simply using the '+' operator. Here we specify a bar chart. By default `geom_bar()` will calculate the height of the bars from the data, but if we want to specify the data for the y-axis we need to supply `stat="identity"`
+
+```{r fig.width=10}
+ggplot(stats, aes(x=isolate, y=reads)) +
+  geom_bar(stat="identity")
+```
+
+- we can easily specifiy some colours
+
+```{r fig.width=10}
+ggplot(stats, aes(x=isolate, y=reads)) +
+  geom_bar(stat="identity", colour='black', fill='blue')
+```
+
+- common colours can be defined simply by name as above, but more control can be gained by specifying html web colours, a colour selector can be found here <https://www.w3schools.com/colors/colors_picker.asp>
+
+```{r fig.width=10}
+ggplot(stats, aes(x=isolate, y=reads)) +
+    geom_bar(stat="identity", colour='#ff0066', fill='#cc0000')
+```
+
+- We can change other stylistic parts of the chart with themes, we can set the general theme with some prebuilt styles e.g. `theme_bw()`, `theme_minimal()`, `theme_classic()`; more details and examples can be found at <https://ggplot2.tidyverse.org/reference/ggtheme.html>
+- Lets try out the `theme_bw()` theme
+
+```{r fig.width=10}
+ggplot(stats, aes(x=isolate, y=reads)) +
+    geom_bar(stat="identity", colour='black', fill='blue') +
+    theme_bw()
+```
+
+- the x-axis labels overlap and are unreadable, so lets rotate them using `theme()`
+
+```{r fig.width=10}
+ggplot(stats, aes(x=isolate, y=reads)) +
+  geom_bar(stat="identity", colour='black', fill='blue') +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=-90)
+  )
+```
+
+- the x-axis labels are not quite aligned to the tick marks, we can adjust them with the `vjust` and `hjust` parameters
+
+```{r fig.width=10}
+ggplot(stats, aes(x=isolate, y=reads)) +
+  geom_bar(stat="identity", colour='black', fill='blue') +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+  )
+```
+
+- we can now change the axes labels (`labs`) and add a title (`ggtitle`), change the font and font sizes of the axis labels
+
+```{r fig.width=10}
+ggplot(stats, aes(x=isolate, y=reads)) +
+  geom_bar(stat="identity", colour='black', fill='blue') +
+  ggtitle("Read counts") +
+  labs(x="Isolate name", y="Read count") +  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5, size=10),
+    axis.title  = element_text(size=15, family='Comic Sans MS')
+  )
+```
+
+- if we prefer we can flip the whole chart
+
+```{r fig.width=10, fig.height=10}
+ggplot(stats, aes(x=isolate, y=reads)) +
+  geom_bar(stat="identity", colour='black', fill='blue') +
+  ggtitle("Read counts") +
+  labs(x="Isolate name", y="Read count") +  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+  ) +
+  coord_flip()
+```
+
+- in the above examples we provided the `stats` data object to the `ggplot()` function. Very often its easier to pipe the data into the `ggplot()` function using `%>%`. As you can see, the `stats` variable name is now outside the `ggplot()` function
+
+```{r fig.width=10}
+stats %>%
+  ggplot(aes(x=isolate, y=reads)) +
+    geom_bar(stat="identity", colour='black', fill='blue') +
+    ggtitle("Read counts") +
+    labs(x="Isolate name", y="Read count") +  theme_bw() +
+    theme(
+      axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+    )
+```
+
+- This allows us to manipulate the data before we plot it, for example we can apply a filter and only plot certain samples. `grepl()` is just a pattern matching function, so filters isolates with the string `SER` in their name
+
+```{r}
+stats %>%
+  filter(grepl("SER",isolate)) %>%
+  ggplot(aes(x=isolate, y=reads)) +
+    geom_bar(stat="identity", colour='black', fill='blue') +
+    ggtitle("Read counts") +
+    labs(x="Isolate name", y="Read count") +
+    theme_bw()
+```
+
+- now that we have a smaller plot, we can also add other useful information, like the actual values of the bars, using `geom_text()`
+
+```{r}
+stats %>%
+  filter(grepl("SER",isolate)) %>%
+  ggplot(aes(x=isolate, y=reads)) +
+    geom_bar(stat="identity", colour='black', fill='blue') +
+    ggtitle("Read counts") +
+    labs(x="Isolate name", y="Read count") +
+    geom_text(aes(label=reads), vjust=-0.3, size=3.5) +
+    theme_bw()
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+## Plotting a scatter plot
+
+- Lets plot a different type of graph, this time plotting `reads` against `coverage`
+
+```{r}
+stats %>%
+  ggplot(aes(x=reads, y=coverage)) +
+    geom_point() +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+    ) 
+```
+
+- we can easily add a smoothed regression line with `geom_smooth()`
+
+```{r}
+stats %>%
+  ggplot(aes(x=reads, y=coverage)) +
+    geom_point() +
+    geom_smooth() +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+    ) 
+```
+
+- if we need to we can limit the region of the plot to include, using `xlim()` and/or `ylim()`
+
+```{r}
+stats %>%
+  ggplot(aes(x=reads, y=coverage)) +
+    geom_point() +
+    geom_smooth() +
+    xlim(c(0, 600000)) + 
+    ylim(c(0, 100)) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+    ) 
+```
+
+- Finally if we wish we can make interactive versions of our plots using the `plotly` package
+- try selection regions of the plot and zooming, using the menu ribbon on the top right of the plot
+
+```{r fig.height=5, fig.width=9}
+library(plotly)
+
+coverage <- stats %>%
+  ggplot(aes(x=reads, y=coverage)) +
+    geom_point() +
+    geom_smooth() +
+    xlim(c(0, 600000)) + 
+    ylim(c(0, 100)) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+    ) 
+
+ggplotly(coverage)
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+## Exercise 1
+
+- load the dataset stored in `data/data.csv`, plot a bar chart of `county` against `popadults` for the state of Ohio (OH)
+- remember how to rotate the x axis labels to make them more readable,
+- add a title to the plot and rename the axes titles
+
+```{r}
+data <- read_csv("data/data.csv")
+data
+```
+
+- Using the same dataset generate a scatter plot of `area` against `poptotal`
+- Try adding a regression line using the `glm` method
+- Try removing some of the outliers from the plot. Hint, use `xlim()` and/or `ylim()`
+- Change the size and colour of the points? Hint: check the help with `?geom_line`
+- Colour the points by the `state` column
+- Set the size of the points according to the `popdensity` column
+- Move the legend position to the bottom of the chart. Hint: check the help with `?theme`
+- Add title and a subtitle
+- Change the axes titles to 'Population total' and 'County area'
+- Improve the labels on the y-axis. Hint: look at `?scale_y_continuous`
+
+```{r}
+
+```
+
+- Check out this site for lots of other example plots <http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html>
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+## Plotting boxplots
+
+- We will use one of the built in datasets for this section, the dataset shows the effect of Vitamin C on tooth growth via orange juice (OJ) or ascorbic acid (VC). Explore the data
+
+```{r}
+ToothGrowth
+```
+
+- Lets do an initial scatter plot of `dose` against `len` colouring by `supp`
+
+```{r}
+ToothGrowth %>%
+  ggplot(aes(x=dose, y=len, color=supp)) +
+    geom_point() +
+    theme_bw()
+```
+
+- this is not that easy to visualise so lets jitter (separate) the points a little by replacing `geom_point` with `geom_jitter`
+
+```{r}
+ToothGrowth %>%
+  ggplot(aes(x=dose, y=len, group=supp, color=supp)) +
+    geom_jitter(width=0.1) +
+    theme_bw()
+```
+
+- In order to plot a boxplot the x-axis needs to be categorical data, so we can convert our `dose` values to characters using the `mutate()` and `as.character()` functions
+
+```{r}
+ToothGrowth %>%
+  mutate(dose=as.character(dose)) %>%
+  ggplot(aes(x=dose, y=len, color=supp)) +
+    geom_boxplot(color='black') +
+    theme_bw()
+```
+
+- Sometimes it is useful to keep the individual points on the plot, we can just add back the jittered layer
+
+```{r}
+ToothGrowth %>%
+  mutate(dose=as.character(dose)) %>%
+  ggplot(aes(x=dose, y=len, color=supp)) +
+    geom_boxplot(color='black') +
+    geom_jitter(width=0.1)  +
+    theme_bw()
+```
+
+- we could even further break the boxplots down by the `supp` variable, by removing `color="black"` from `geom_boxplot()`
+
+```{r}
+ToothGrowth %>%
+  mutate(dose=as.character(dose)) %>%
+  ggplot(aes(x=dose, y=len, color=supp)) +
+    geom_boxplot() +
+    geom_jitter(width=0.1)  +
+    theme_bw()
+```
+
+- lets tidy up the plot, by labeling the axes and the legend properly
+
+```{r}
+ToothGrowth %>%
+  mutate(dose=as.character(dose)) %>%
+  ggplot(aes(x=dose, y=len, color=supp)) +
+    geom_boxplot(color='black') +
+    geom_jitter(width=0.1)  +
+    labs(x="Vitamin C dose", y="Tooth length") +
+    theme_bw() +
+    theme(
+      legend.title = element_blank()    # this removes the legend title
+    )
+```
+
+- And if we want to add some significance labels, we can make use of the `ggsignif` package
+
+```{r}
+library(ggsignif)
+
+ToothGrowth %>%
+  mutate(dose=as.character(dose)) %>%
+  ggplot(aes(x=dose, y=len, color=supp)) +
+    geom_boxplot(color='black') +
+    geom_jitter(width=0.1)  +
+    labs(x="Vitamin C dose", y="Tooth length") +
+    theme_bw() +
+    theme(
+      legend.title = element_blank()    # this removes the legend title
+    ) +
+    ylim(0,40) +
+    geom_signif(comparisons = list(c("0.5", "1")), map_signif_level = TRUE, textsize = 6, y_position = 30, colour="black", annotation=c('**')) +
+    geom_signif(comparisons = list(c("1", "2")), map_signif_level = TRUE, textsize = 6, y_position = 36, colour="black", annotation=c('*')) 
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+## Plotting line plots
+
+- Using the same tooth growth dataset, in order to draw a line plot we need to calculate the means and standard deviations of the data. Remember the data looks like this
+
+```{r}
+ToothGrowth
+```
+
+- we can summarise the data by grouping the variables and calculating the mean/sd over these variables
+
+```{r}
+summary <- ToothGrowth %>%
+  group_by(supp, dose) %>%
+  summarise(mean=mean(len), sd=sd(len))
+
+summary
+```
+
+- it is now straightforward to generate a line plot
+
+```{r}
+summary %>%
+  ggplot(aes(x=dose, y=mean, color=supp)) +
+    geom_line() +
+    theme_bw()
+```
+
+- we can also use the calculated standard deviations to add error bars
+
+```{r}
+summary %>%
+  ggplot(aes(x=dose, y=mean, color=supp)) +
+    geom_line() +
+    geom_point() +
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.05) +
+    theme_bw()
+```
+
+- the error bars overlap so we can actually shift (dodge) them slightly
+
+```{r}
+summary %>%
+  ggplot(aes(x=dose, y=mean, color=supp)) +
+    geom_line() +
+    geom_point() +
+    geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.05,
+                    position=position_dodge(0.05)) +
+    theme_bw()
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+## Exercise 2
+
+- We will use another default dataset, `mtcars`. First take a look and explore
+
+```{r}
+
+```
+
+- Plot a boxplot with `cyl` on the x-axis and `mpg` on the y-axis
+- include the raw data points, jittered and coloured by carb
+- Tidy up the axes labels and remove the legend title
+
+```{r}
+
+```
+
+- Now plot a line graph showing the mean and the standard deviations of the `mpg` values, coloured by the number of carburetors
+
+```{r}
+
+```
+
+- Plot a similar plot comparing the number oc cylinders with the mpg but coloured by the number of gears
+
+```{r}
+
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+## Plotting dendrograms
+
+- We can easily perform hierarchical clustering on a dataset and then draw a tree
+- here we use the built in dataset of `USarrests`, first explore the data
+
+```{r}
+USArrests
+```
+
+- Now we can perform the clustering using the `hclust` function, this uses euclidean distances by default
+- But the distance object (`dist(USArrests)`) can be any kind of similarity matrix, e.g pearson correlations
+
+```{r}
+hc <- hclust(dist(USArrests), "ave")  # hierarchical clustering
+hc
+```
+
+- Now we draw the tree using the `ggdendrogram()` function from the \``ggdendro` package
+
+```{r fig.height=7}
+library(ggdendro)
+
+p <- ggdendrogram(hc, rotate = TRUE, size = 2)
+p
+```
+
+- remember that we can easily make the plot interactive with `ggplotly()`
+
+```{r}
+ggplotly(p)
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+## Combining plots into a figure
+
+- In order to combine plots into a publication ready figure, lets plot both the previous reads and the coverage plots, only this time we will store the plots in the variables `reads` and `coverage`, notice that they won't be printed when you run the code
+
+```{r}
+reads <- stats %>%
+  ggplot(aes(x=isolate, y=reads)) +
+    geom_bar(stat="identity", colour='black', fill='blue') +
+    ggtitle("Read counts") +
+    labs(x="Isolate name", y="Read count") +  theme_bw() +
+    theme(
+      axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+    )
+
+coverage <- stats %>%
+  ggplot(aes(x=isolate, y=coverage)) +
+    geom_bar(stat="identity", colour='black', fill='#888888') +
+    ggtitle("Coverage") +
+    labs(x="Isolate name", y="Coverage") +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle=-90, hjust=1, vjust=0.5)
+    )
+```
+
+- but we can show the plots by just "running" the variable names
+
+```{r}
+reads
+coverage
+```
+
+- we can now make a combined plot usingt the `patchwork` package
+- firstly side by side with the '+' operator
+
+```{r}
+library(patchwork)
+
+reads + coverage
+```
+
+- if we want them above and below we change the '+' operator to '/'
+
+```{r fig.height=10, fig.width=20}
+reads / coverage
+```
+
+- We can add subplot labels (A, B etc)
+
+```{r fig.height=10, fig.width=20}
+reads / coverage + plot_annotation(tag_levels = 'A') + plot_layout(guides = "collect")
+```
+
+- Note that we can include more plots in the figure. Here we generate four versions of the `reads` plot but changing the underlying theme. We can also add a new title, note that this is overriding the `ggtitle()` already in the `reads` plot. Can you spot the differences in the themes?
+
+```{r fig.height=10, fig.width=20}
+
+p1 <- reads + theme_bw() + ggtitle('theme_bw()')
+p2 <- reads + theme_classic() + ggtitle('theme_classic()')
+p3 <- reads + theme_minimal() + ggtitle('theme_minimal()')
+p4 <- reads + theme_dark() + ggtitle('theme_dark()')
+
+( p1 + p2 ) / ( p3 + p4 ) + plot_annotation(tag_levels = 'A')
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+## Exercise 3
+
+- Generate a combined figure including a boxplot and a lineplot comparing the number of cylinders with the mpg as generated above, label the subplots using a, b
+
+```{r}
+
+```
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+<hr style="border:2px solid gray">
+
+</hr>
+
+# Session details
+
+- Generate document version details
+
+```{r}
+sessionInfo()
+```
