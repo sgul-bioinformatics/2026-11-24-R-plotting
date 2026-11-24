@@ -12,7 +12,7 @@ output:
     df_print: paged
 ---
 
-```{r setup, include=FALSE} 
+```{r setup, include=FALSE}
 ########## NOTEBOOK CONFIGURATION, DO NOT EDIT ##########
 
 # Set some paramters for the notebook
@@ -30,17 +30,23 @@ rm(list=ls(all=T))
 ########## NOTEBOOK CONFIGURATION, DO NOT EDIT ##########
 ```
 
-<hr style="border:2px solid gray"> </hr>
+<hr style="border:2px solid gray">
 
-**_Please follow the instructions in the README file before starting this tutorial._**
+</hr>
 
-<hr style="border:2px solid gray"> </hr>
+***Please follow the instructions in the README file before starting this tutorial.***
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+<hr style="border:2px solid gray">
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+</hr>
 
-<hr style="border:2px solid gray"> </hr>
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*.
+
+<hr style="border:2px solid gray">
+
+</hr>
 
 # Loading the packages
 
@@ -48,20 +54,22 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 library(tidyverse)
 ```
 
-<hr style="border:2px solid gray"> </hr>
+<hr style="border:2px solid gray">
+
+</hr>
 
 # Plotting with ggplot
 
 ## Plotting genome coverage
 
-* Erythromycin resistance can be conferred by 2473 bp plasmid encoding *repL* and *ermC*
-* First lets load the overall genome coverage statistics for each isolate
+- Erythromycin resistance can be conferred by 2473 bp plasmid encoding *repL* and *ermC*
+- First lets load the overall genome coverage statistics for each isolate
 
 ```{r}
 coverages.NC_017763 <- read_tsv('data/stats.coverage.NC_017763.txt', show_col_types = FALSE)
 ```
 
-* First lets load the read depths for each isolate mapped to the reference plasmid
+- First lets load the read depths for each isolate mapped to the reference plasmid
 
 ```{r}
 depths <- 'data/NC_018969.tsv'
@@ -70,23 +78,24 @@ data <- read_tsv(file=depths, show_col_types = FALSE)
 data
 ```
 
-* This data file contains the number of reads mapping at each genome position (POS) of the reference (NC_018969.1). The columns are labelled by the name of the alignment file (*.bam)
-* Lets rename the first column, as it begins with a # which can cause problems when specifying columns
+- This data file contains the number of reads mapping at each genome position (POS) of the reference (NC_018969.1). The columns are labelled by the name of the alignment file (\*.bam)
+- Lets rename the first column, as it begins with a \# which can cause problems when specifying columns
 
 ```{r}
 data %>%
   rename(name='#CHROM')
 ```
-* Lets also pivit the data to produce the long form of the table
+
+- Lets also pivot the data to produce the long form of the table
 
 ```{r}
 data %>%
   rename(name='#CHROM') %>%
   pivot_longer(cols=c(-name, -POS), names_to = 'isolate', values_to = 'depth')
 ```
- 
- * And we need to extract out the isolate name from the alignment file paths, we can do this with a combination of te `mutate()` and `str_replace()` functions
- * we can also save the data into a variable called `long_data`
+
+- And we need to extract out the isolate name from the alignment file paths, we can do this with a combination of te `mutate()` and `str_replace()` functions
+- we can also save the data into a variable called `long_data`
 
 ```{r}
 long_data <- data %>%
@@ -96,7 +105,7 @@ long_data <- data %>%
 long_data
 ```
 
-* In order to plot for a single isolate we need to first filter the data, then pass the data into `ggplot()`. Here we plot the plasmid position (`POS`) against the number of reads covering that position (`depth`) using `geom_line()` setting the line width to 2
+- In order to plot for a single isolate we need to first filter the data, then pass the data into `ggplot()`. Here we plot the plasmid position (`POS`) against the number of reads covering that position (`depth`) using `geom_line()` setting the line width to 2
 
 ```{r}
 long_data %>%
@@ -105,7 +114,7 @@ long_data %>%
     geom_line(size=2) 
 ```
 
-* lets add two arrows to reprsent the position of the genes on the plasmid, we just prove x,y coords and some style attributes
+- lets add two arrows to reprsent the position of the genes on the plasmid, we just provide x,y coords and some style attributes
 
 ```{r}
 long_data %>%
@@ -116,7 +125,7 @@ long_data %>%
     geom_segment(aes(x=1292,y=1500,xend=2026,yend=1500),size=3,color='red',arrow=arrow(length=unit(0.4,"cm"))) 
 ```
 
-* Finally we can change the axes labels with `labs()` and set the theme to `theme_bw()`
+- Finally we can change the axes labels with `labs()` and set the theme to `theme_bw()`
 
 ```{r}
 long_data %>%
@@ -129,7 +138,7 @@ long_data %>%
     theme_bw()
 ```
 
-* Note that it is sometimes useful to plot the y axis with a log scale, using the function `scale_y_log10()`
+- Note that it is sometimes useful to plot the y axis with a log scale, using the function `scale_y_log10()`
 
 ```{r}
 long_data %>%
@@ -143,11 +152,13 @@ long_data %>%
     theme_bw()
 ```
 
-<hr style="border:2px solid gray"> </hr>
+<hr style="border:2px solid gray">
+
+</hr>
 
 ## Plotting multiple charts
 
-* if we want to plot the same graph for all isolates we can use `facet_wrap()`. not the removal of the `filter()` function and the inclusion of the `group=isolate` in the `ggplot()` function, then we apply `facet_wrap(~isolate)` to complete the process
+- if we want to plot the same graph for all isolates we can use `facet_wrap()`. note the removal of the `filter()` function and the inclusion of the `group=isolate` in the `ggplot()` function, then we apply `facet_wrap(~isolate)` to complete the process
 
 ```{r fig.height=20, fig.width=20}
 long_data %>%
@@ -163,33 +174,37 @@ long_data %>%
     facet_wrap(~isolate)
 ```
 
-* We can save that final figure to a file with `ggsave()`
+- We can save that final figure to a file with `ggsave()`
 
 ```{r}
 ggsave('NC_018969-mapping.png', height=20, width=20)
 ```
 
-<hr style="border:2px solid gray"> </hr>
+<hr style="border:2px solid gray">
+
+</hr>
 
 # Exercise
 
-* load the dataset stored in `data/data.csv`, plot a bar chart of `county` against `popadults`, but plot for all states
+- load the dataset stored in `data/data.csv`, plot a bar chart of `county` against `popadults`, but plot for all states
 
 ```{r}
 
 ```
 
-* set the y-axes to use a log scale
-* change the y-axes labels to use commas in the numbers
-* add a regresson line
-* colour the points by the `category` column
-* include all the subplots in one row. Hint: check `?facet_wrap`
+- set the y-axes to use a log scale
+- change the y-axes labels to use commas in the numbers
+- add a regresson line
+- colour the points by the `category` column
+- include all the subplots in one row. Hint: check `?facet_wrap`
 
-<hr style="border:2px solid gray"> </hr>
+<hr style="border:2px solid gray">
+
+</hr>
 
 # Session details
 
-* Generate document version details
+- Generate document version details
 
 ```{r}
 sessionInfo()

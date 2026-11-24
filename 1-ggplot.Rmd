@@ -12,7 +12,7 @@ output:
     df_print: paged
 ---
 
-```{r setup, include=FALSE} 
+```{r setup, include=FALSE}
 ########## NOTEBOOK CONFIGURATION, DO NOT EDIT ##########
 
 # Set some paramters for the notebook
@@ -30,7 +30,9 @@ rm(list=ls(all=T))
 ########## NOTEBOOK CONFIGURATION, DO NOT EDIT ##########
 ```
 
-<hr style="border:2px solid gray"> </hr>
+<hr style="border:2px solid gray">
+
+</hr>
 
 ***Please follow the instructions in the README file before starting this tutorial.***
 
@@ -370,8 +372,8 @@ ggplotly(coverage)
 - add a title to the plot and rename the axes titles
 
 ```{r}
-data <- read_csv("data/data.csv")
-data
+
+
 ```
 
 - Using the same dataset generate a scatter plot of `area` against `poptotal`
